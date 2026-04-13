@@ -415,57 +415,21 @@ export async function linkRepo(
 
   await Bun.write(claudePath, updatedContent);
 
-  // 2. Create memsudo.yaml in the repo
-  const yamlContent = `# memsudo — links this repo to a palace room
-# This file is gitignored (contains machine-specific paths)
-palace: ${palaceRoot}
-room: ${room.path}
-`;
-  await Bun.write(join(absRepo, "memsudo.yaml"), yamlContent);
+  // 2. Create/update links.yaml in the room directory (palace side)
+  const linksYamlPath = join(room.absPath, "links.yaml");
+  let linksYaml = "";
 
-  // 3. Add memsudo.yaml to repo's .gitignore
-  const gitignorePath = join(absRepo, ".gitignore");
-  const ignoreEntry = "memsudo.yaml";
-
-  if (existsSync(gitignorePath)) {
-    const gitignore = await Bun.file(gitignorePath).text();
-    // Only add if not already present
-    const lines = gitignore.split("\n").map((l) => l.trim());
-    if (!lines.includes(ignoreEntry)) {
-      const newGitignore = gitignore.trimEnd() + "\n" + ignoreEntry + "\n";
-      await Bun.write(gitignorePath, newGitignore);
-    }
-  } else {
-    await Bun.write(gitignorePath, ignoreEntry + "\n");
+  if (existsSync(linksYamlPath)) {
+    linksYaml = readFileSync(linksYamlPath, "utf-8");
   }
 
-  // 4. Create .claude/hooks.json in the repo with session-start hook
-  const claudeDir = join(absRepo, ".claude");
-  await mkdir(claudeDir, { recursive: true });
-
-  const sessionStartScript = join(palaceRoot, "scripts", "session-start.sh");
-
-  const hooksJson = {
-    hooks: {
-      SessionStart: [
-        {
-          matcher: "startup|resume",
-          hooks: [
-            {
-              type: "command",
-              command: `bash ${sessionStartScript}`,
-              timeout: 10,
-            },
-          ],
-        },
-      ],
-    },
-  };
-
-  await Bun.write(
-    join(claudeDir, "hooks.json"),
-    JSON.stringify(hooksJson, null, 2) + "\n"
-  );
+  // Check if this repo is already linked
+  if (!linksYaml.includes(absRepo)) {
+    const entry = linksYaml.length === 0
+      ? `# links.yaml — machine-readable pointers to code and infrastructure\nrepos:\n  local: ${absRepo}\n`
+      : linksYaml.trimEnd() + `\n  local: ${absRepo}\n`;
+    await Bun.write(linksYamlPath, entry);
+  }
 }
 
 /**

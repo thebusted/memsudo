@@ -72,7 +72,6 @@ function claudeMdTemplate(name: string): string {
 
 function gitignoreEntries(): string {
   return `.secrets/
-memsudo.yaml
 `;
 }
 

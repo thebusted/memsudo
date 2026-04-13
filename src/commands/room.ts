@@ -257,7 +257,7 @@ async function handleLink(args: string[]): Promise<void> {
   try {
     await linkRepo(name, repoPath, palaceRoot);
     console.log(
-      `\u2713 Linked ${name} \u2192 ${repoPath} (memsudo.yaml + hooks installed)`
+      `\u2713 Linked ${name} \u2192 ${repoPath} (links.yaml updated)`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

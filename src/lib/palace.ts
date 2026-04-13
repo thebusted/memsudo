@@ -94,6 +94,29 @@ export function findRoot(startDir?: string): string {
     current = parent;
   }
 
+  // Check 3: Global config (~/.config/memsudo/config.yaml)
+  const home =
+    (typeof Bun !== "undefined" ? Bun.env.HOME : undefined) ??
+    process.env.HOME;
+  if (home) {
+    const globalConfig = join(home, ".config", "memsudo", "config.yaml");
+    if (existsSync(globalConfig)) {
+      try {
+        const content = readFileSync(globalConfig, "utf-8");
+        const match = content.match(/^default_palace:\s*(.+)$/m);
+        if (match) {
+          const raw = match[1].trim().replace(/^["']|["']$/g, "");
+          const resolved = expandTilde(raw);
+          if (hasSignatureIndex(resolved)) {
+            return resolved;
+          }
+        }
+      } catch {
+        // ignore read errors
+      }
+    }
+  }
+
   throw new Error("Not in a memsudo palace. Run 'memsudo init' first.");
 }
 
