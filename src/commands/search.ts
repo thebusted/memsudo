@@ -83,9 +83,11 @@ export async function searchCommand(args: string[]): Promise<void> {
     "--exclude-dir=dist",
   ];
 
-  // Fixed-string mode unless --regex
+  // Fixed-string mode unless --regex; use extended regex for modern syntax
   if (!regex) {
     grepArgs.push("-F");
+  } else {
+    grepArgs.push("-E");
   }
 
   grepArgs.push(query, searchDir);
