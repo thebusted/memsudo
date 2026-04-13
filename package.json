@@ -1,0 +1,25 @@
+{
+  "name": "memsudo",
+  "version": "1.0.0",
+  "description": "Memory Palace CLI — organize knowledge with markdown, zero dependencies",
+  "type": "module",
+  "bin": {
+    "memsudo": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "dev": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "files": ["dist/", "templates/", "README.md", "LICENSE"],
+  "keywords": ["memory-palace", "knowledge-management", "cli", "markdown", "ai-agent"],
+  "author": "Sumeth Sudo <thebusted@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebusted/memsudo.git"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.12"
+  }
+}
