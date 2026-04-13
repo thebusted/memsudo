@@ -8,7 +8,7 @@
  */
 
 import { mkdir } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join, resolve, basename, dirname, relative } from "path";
 import { findRoot } from "./palace";
 import {
@@ -17,6 +17,67 @@ import {
   findLinksSection,
   parseAliases,
 } from "./markdown";
+
+// ---------------------------------------------------------------------------
+// links.yaml validation
+// ---------------------------------------------------------------------------
+
+export interface LinksYaml {
+  repos?: Record<string, string>;
+  infra?: Record<string, string>;
+}
+
+const VALID_REPO_KEYS = new Set(["local", "remote", "server", "origin", "mirror"]);
+const VALID_INFRA_KEYS = new Set(["docker", "database", "redis", "ssh", "tunnel", "nginx", "cdn", "api", "dashboard", "pm2"]);
+
+/**
+ * Parse and validate a links.yaml file.
+ * Returns parsed object or throws with specific error.
+ */
+export function parseLinksYaml(filePath: string): LinksYaml {
+  if (!existsSync(filePath)) return {};
+
+  const content = readFileSync(filePath, "utf-8");
+  const result: LinksYaml = {};
+  let currentSection: "repos" | "infra" | null = null;
+
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    if (trimmed === "repos:") {
+      currentSection = "repos";
+      result.repos = {};
+      continue;
+    }
+    if (trimmed === "infra:") {
+      currentSection = "infra";
+      result.infra = {};
+      continue;
+    }
+
+    // Parse key: value under current section
+    const kvMatch = trimmed.match(/^(\w+):\s*(.+)$/);
+    if (kvMatch && currentSection) {
+      const [, key, value] = kvMatch;
+      const cleanValue = value.replace(/^["']|["']$/g, "");
+
+      if (currentSection === "repos") {
+        if (!VALID_REPO_KEYS.has(key)) {
+          console.warn(`links.yaml warning: unknown repo key "${key}" in ${filePath}`);
+        }
+        result.repos![key] = cleanValue;
+      } else if (currentSection === "infra") {
+        if (!VALID_INFRA_KEYS.has(key)) {
+          console.warn(`links.yaml warning: unknown infra key "${key}" in ${filePath}`);
+        }
+        result.infra![key] = cleanValue;
+      }
+    }
+  }
+
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -298,6 +359,13 @@ export async function findByName(
 ): Promise<RoomInfo | RoomInfo[] | null> {
   const rooms = await listRooms(palaceRoot);
   const lower = name.toLowerCase();
+
+  // 0. Path match — allows "tools/memsudo" or "lab/gold-brain" for disambiguation
+  if (lower.includes("/")) {
+    const pathMatches = rooms.filter((r) => r.path.toLowerCase().endsWith(lower));
+    if (pathMatches.length === 1) return pathMatches[0];
+    if (pathMatches.length > 1) return pathMatches;
+  }
 
   // 1. Exact directory name match
   const exactMatches = rooms.filter((r) => r.name.toLowerCase() === lower);
